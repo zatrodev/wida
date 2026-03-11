@@ -6,7 +6,7 @@
 <header
   class="sticky top-0 mx-auto max-w-360 bg-background/10 pt-4 tracking-tight backdrop-blur-md"
 >
-  <div class="mx-16 flex place-items-center border-b py-6">
+  <div class="mx-8 flex place-items-center border-b py-6 md:mx-16">
     <img src="" alt="" />
 
     <nav>
