@@ -12,6 +12,8 @@
   import { Label } from '$lib/components/ui/label';
   import { Switch } from '$lib/components/ui/switch';
   import { Activity, ShieldAlert, Download, Settings, ServerCrash } from 'lucide-svelte';
+  import Header from '$lib/components/Header.svelte';
+  import ModeToggle from '$lib/components/ModeToggle.svelte';
 
   let testingSystem = $state(false);
 
@@ -30,11 +32,14 @@
   }
 </script>
 
-<main class="container mx-auto max-w-5xl p-4 md:p-8">
-  <div class="mb-8 flex items-center gap-3">
-    <ShieldAlert class="h-10 w-10 text-primary" />
+<main
+  class="container mx-auto mt-8 flex max-w-5xl flex-col p-4 md:p-8 [&_h1]:font-mono [&_h3]:tracking-tighter"
+>
+  <ModeToggle class="ml-auto size-10 " />
+  <div class="mb-8 flex gap-3">
+    <ShieldAlert class="mt-2 text-primary sm:size-8" />
     <div>
-      <h1 class="text-3xl font-extrabold tracking-tight">Administrator Portal</h1>
+      <h1 class="text-xl tracking-tight sm:text-3xl">Administrator Portal</h1>
       <p class="text-muted-foreground">System configuration and emergency overrides</p>
     </div>
   </div>
@@ -56,7 +61,7 @@
       <CardContent class="pt-4">
         <Button
           variant="destructive"
-          class="h-16 w-full text-lg font-bold tracking-wider uppercase disabled:opacity-50"
+          class="h-16 w-full font-mono font-bold tracking-wider uppercase disabled:opacity-50 "
           onclick={runSystemTest}
           disabled={testingSystem}
         >
@@ -65,7 +70,7 @@
       </CardContent>
     </Card>
 
-    <Card class="bg-white/50 backdrop-blur-sm dark:bg-black/50">
+    <Card class="bg-background/80">
       <CardHeader>
         <CardTitle class="flex items-center gap-2">
           <Settings class="h-5 w-5" />

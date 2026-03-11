@@ -9,13 +9,13 @@ export const auth = betterAuth({
   baseURL: env.ORIGIN,
   secret: env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: 'pg' }),
-  emailAndPassword: { enabled: true },
+  emailAndPassword: { enabled: true, signUpDisabled: true },
   user: {
     additionalFields: {
       role: {
         type: 'string',
         required: false,
-        defaultValue: 'user'
+        defaultValue: 'admin'
       }
     }
   },

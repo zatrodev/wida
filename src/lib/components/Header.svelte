@@ -11,7 +11,7 @@
 
     <nav>
       <ul class="flex gap-4">
-        <li><a href={resolve('/dashboard')}>Dashboard</a></li>
+        <li><a href={resolve('/')}>Dashboard</a></li>
         <li><a href="">Settings</a></li>
       </ul>
     </nav>

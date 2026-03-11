@@ -1,6 +1,6 @@
 <script lang="ts">
   import Clock from '$lib/components/Clock.svelte';
-  import { MoreHorizontal, ArrowUp, ArrowDown, ChevronDown } from 'lucide-svelte';
+  import { Ellipsis, ArrowUp, ArrowDown, ChevronDown } from 'lucide-svelte';
 
   const chart1 = [20, 25, 30, 40, 50, 45, 60, 55, 70, 65, 80, 75, 90, 85, 100, 95];
   const chart2 = [40, 35, 30, 25, 20, 30, 40, 50, 45, 55, 60, 50, 60, 45, 55];
@@ -43,11 +43,11 @@
   </div>
 
   <!-- Bento Grid -->
-  <div class="grid grid-cols-12 gap-6">
+  <div class="grid max-h-screen grid-cols-12 gap-6">
     <!-- ROW 1 -->
     <!-- Card 1: Total energy consumption => Seismic Activity -->
     <div
-      class="col-span-12 overflow-hidden rounded-[2rem] border border-border p-6 lg:col-span-6 lg:p-8"
+      class="col-span-12 overflow-hidden rounded-4xl border border-border p-6 lg:col-span-6 lg:p-8"
     >
       <div class="mb-10 flex items-center justify-between">
         <h3 class="text-xl">Total seismic activities</h3>
@@ -65,9 +65,9 @@
             <span class="flex items-center text-sm font-medium text-muted-foreground"
               >Primary <ArrowUp class="ml-1 h-3 w-3" /></span
             >
-            <MoreHorizontal class="h-4 w-4 text-muted-foreground" />
+            <Ellipsis class="h-4 w-4 text-muted-foreground" />
           </div>
-          <div class="mb-6 flex h-28 items-end gap-[3px]">
+          <div class="mb-6 flex h-28 items-end gap-0.75">
             {#each chart1 as height, i (i)}
               <div
                 class="w-full rounded-full transition-all {i > chart1.length - 6
@@ -87,10 +87,10 @@
             <span class="flex items-center text-sm font-medium text-muted-foreground"
               >Secondary <ArrowDown class="ml-1 h-3 w-3" /></span
             >
-            <MoreHorizontal class="h-4 w-4 text-muted-foreground" />
+            <Ellipsis class="h-4 w-4 text-muted-foreground" />
           </div>
-          <div class="mb-6 flex h-28 items-end gap-[3px]">
-            {#each chart2 as height, i}
+          <div class="mb-6 flex h-28 items-end gap-0.75">
+            {#each chart2 as height, i (i)}
               <div
                 class="w-full rounded-full transition-all {i < 5
                   ? 'bg-foreground'
@@ -109,10 +109,10 @@
             <span class="flex items-center text-sm font-medium text-muted-foreground"
               >Tertiary <ArrowDown class="ml-1 h-3 w-3" /></span
             >
-            <MoreHorizontal class="h-4 w-4 text-muted-foreground" />
+            <Ellipsis class="h-4 w-4 text-muted-foreground" />
           </div>
-          <div class="mb-6 flex h-28 items-end gap-[3px]">
-            {#each chart3 as height, i}
+          <div class="mb-6 flex h-28 items-end gap-0.75">
+            {#each chart3 as height, i (i)}
               <div
                 class="w-full rounded-full transition-all {i > chart3.length - 8 &&
                 i < chart3.length - 2
@@ -130,11 +130,11 @@
 
     <!-- Card 2: Green connections => Sensor connections -->
     <div
-      class="col-span-12 flex flex-col overflow-hidden rounded-[2rem] border border-border p-6 lg:col-span-3 lg:p-8"
+      class="col-span-12 flex flex-col overflow-hidden rounded-4xl border border-border p-6 lg:col-span-3 lg:p-8"
     >
       <div class="mb-6 flex items-center justify-between">
         <h3 class="text-xl font-medium">Sensor connections</h3>
-        <MoreHorizontal class="h-5 w-5 text-muted-foreground" />
+        <Ellipsis class="h-5 w-5 text-muted-foreground" />
       </div>
 
       <div class="mb-6 flex items-center justify-between">
@@ -151,10 +151,10 @@
 
       <!-- Glowing Isometric abstract room graphic -->
       <div
-        class="relative my-4 flex aspect-video w-full flex-grow items-center justify-center overflow-hidden rounded-xl border border-border/20 bg-black/20"
+        class="relative my-4 flex aspect-video w-full grow items-center justify-center overflow-hidden rounded-xl border border-border/20 bg-black/20"
       >
         <div
-          class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:15px_15px]"
+          class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-size-[15px_15px]"
         ></div>
         <!-- Scanning glowing line -->
         <div
@@ -167,7 +167,7 @@
           <div class="relative h-10 w-16 rounded-sm border border-green-500/40">
             <div class="absolute -bottom-3 left-1/2 h-3 w-5 -translate-x-1/2 bg-green-500/20"></div>
             <div
-              class="absolute -bottom-4 left-1/2 h-[2px] w-10 -translate-x-1/2 bg-green-500/40"
+              class="absolute -bottom-4 left-1/2 h-0.5 w-10 -translate-x-1/2 bg-green-500/40"
             ></div>
           </div>
         </div>
@@ -175,26 +175,26 @@
 
       <div class="mt-4 flex items-center justify-between">
         <span class="text-sm text-muted-foreground">Available memory</span>
-        <div class="mx-4 h-[2px] flex-grow bg-muted-foreground/30"></div>
+        <div class="mx-4 h-0.5 grow bg-muted-foreground/30"></div>
         <span class="text-xl font-medium">83%</span>
       </div>
     </div>
 
     <!-- Card 3: Recommendations -->
     <div
-      class="col-span-12 flex flex-col justify-between overflow-hidden rounded-[2rem] border border-border p-6 lg:col-span-3 lg:p-8"
+      class="col-span-12 flex flex-col justify-between overflow-y-scroll rounded-4xl border border-border p-6 lg:col-span-3 lg:p-8"
     >
       <div>
         <div class="mb-6 flex items-center justify-between">
           <h3 class="text-xl font-medium">Recommendations</h3>
-          <MoreHorizontal class="h-5 w-5 text-muted-foreground" />
+          <Ellipsis class="h-5 w-5 text-muted-foreground" />
         </div>
         <p class="text-sm text-muted-foreground">Personalized tips for optimizing safety</p>
       </div>
 
       <div class="mt-8 flex flex-col gap-4">
         <!-- Light neutral recommendation box -->
-        <div class="rounded-[1.5rem] bg-neutral p-6 text-neutral-foreground">
+        <div class="rounded-3xl bg-neutral p-6 text-neutral-foreground">
           <p class="mb-6 text-sm leading-relaxed">
             Stable day ahead! We recommend maximizing sensor battery usage b...
           </p>
@@ -202,7 +202,7 @@
         </div>
 
         <!-- Dark recommendation box -->
-        <div class="rounded-[1.5rem] border border-border/60 bg-transparent p-6">
+        <div class="rounded-3xl border border-border/60 bg-transparent p-6">
           <p class="mb-6 text-sm leading-relaxed text-foreground">
             Run diagnostics after 8 PM to reduce network load.
           </p>
@@ -217,12 +217,12 @@
     <!-- ROW 2 -->
     <!-- Card 4: Tracking (Light neutral card) -->
     <div
-      class="col-span-12 flex flex-col justify-between overflow-hidden rounded-[2rem] border border-neutral/10 bg-neutral p-6 text-neutral-foreground lg:col-span-2 lg:p-8"
+      class="col-span-12 flex flex-col justify-between overflow-hidden rounded-4xl border border-neutral/10 bg-neutral p-6 text-neutral-foreground lg:col-span-2 lg:p-8"
     >
       <div>
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-xl font-medium">Tracking</h3>
-          <MoreHorizontal class="h-5 w-5 opacity-50" />
+          <Ellipsis class="h-5 w-5 opacity-50" />
         </div>
         <p class="text-sm opacity-70">Seismic energy tomorrow</p>
       </div>
@@ -234,7 +234,7 @@
 
     <!-- Card 5: Detailed report -->
     <div
-      class="col-span-12 flex flex-col justify-between overflow-hidden rounded-[2rem] border border-border p-6 lg:col-span-4 lg:p-8"
+      class="col-span-12 flex flex-col justify-between overflow-hidden rounded-4xl border border-border p-6 lg:col-span-4 lg:p-8"
     >
       <div>
         <div class="mb-4 flex items-center justify-between">
@@ -250,11 +250,9 @@
 
       <div class="mt-8 flex w-full flex-col">
         <div class="flex w-full justify-between pb-6 text-xs text-muted-foreground">
-          {#each reportData as d}
+          {#each reportData as d (d)}
             <div class="-mr-2 flex flex-col justify-end last:mr-0">
-              <span class="mb-4 flex items-center"
-                >{d.day} <d.arrow class="ml-[2px] h-3 w-3" /></span
-              >
+              <span class="mb-4 flex items-center">{d.day} <d.arrow class="ml-0.5 h-3 w-3" /></span>
               <span class="text-[13px] {d.active ? 'font-bold text-foreground' : 'text-foreground'}"
                 >{d.val}</span
               >
@@ -263,7 +261,7 @@
           {/each}
         </div>
         <!-- Bar below the graphs matching the screenshot exactly -->
-        <div class="flex h-[6px] w-full overflow-hidden rounded bg-border">
+        <div class="flex h-1.5 w-full overflow-hidden rounded bg-border">
           <div class="w-[28.5%] bg-transparent"></div>
           <!-- Skips Mon & Tue -->
           <div class="w-[14.28%] bg-white"></div>
@@ -274,7 +272,7 @@
 
     <!-- Card 6: Green energy usage => Clean system usage (Light neutral card) -->
     <div
-      class="col-span-12 flex flex-col justify-between overflow-hidden rounded-[2rem] border border-neutral/10 bg-neutral p-6 text-neutral-foreground lg:col-span-6 lg:p-8"
+      class="col-span-12 flex flex-col justify-between overflow-hidden rounded-4xl border border-neutral/10 bg-neutral p-6 text-neutral-foreground lg:col-span-6 lg:p-8"
     >
       <div class="mb-10 flex items-center justify-between">
         <h3 class="text-xl font-medium">Clean system usage</h3>
@@ -285,7 +283,7 @@
         </button>
       </div>
 
-      <div class="grid flex-grow grid-cols-12 items-end">
+      <div class="grid grow grid-cols-12 items-end">
         <div class="col-span-4 flex flex-col">
           <p class="mb-6 text-sm opacity-70">Clean system usage</p>
           <div class="text-[5rem] leading-none font-light tracking-tight">47%</div>
@@ -297,17 +295,17 @@
           <div class="relative flex w-full max-w-sm items-center justify-between">
             <!-- Dashed line connecting circles -->
             <div
-              class="absolute top-[11px] left-0 -z-10 w-full border-b-[1.5px] border-dashed border-neutral-foreground/30"
+              class="absolute top-2.75 left-0 -z-10 w-full border-b-[1.5px] border-dashed border-neutral-foreground/30"
             ></div>
 
-            {#each timeline as t}
+            {#each timeline as t (t)}
               <div class="flex flex-col items-center gap-3">
                 {#if t.state === 'empty'}
                   <div
-                    class="h-[22px] w-[22px] rounded-full border-[1.5px] border-neutral-foreground/50 bg-neutral"
+                    class="h-5.5 w-5.5 rounded-full border-[1.5px] border-neutral-foreground/50 bg-neutral"
                   ></div>
                 {:else}
-                  <div class="h-[22px] w-[22px] rounded-full bg-neutral-foreground shadow-sm"></div>
+                  <div class="h-5.5 w-5.5 rounded-full bg-neutral-foreground shadow-sm"></div>
                 {/if}
                 <span class="text-[10px] font-medium tracking-wider uppercase opacity-70"
                   >{t.time}</span
