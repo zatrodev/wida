@@ -5,7 +5,9 @@
   import { Checkbox } from '$lib/components/ui/checkbox';
   import { Input } from '$lib/components/ui/input';
   import { Button } from '$lib/components/ui/button';
-  import { Mail, Eye, EyeOff, Home } from 'lucide-svelte';
+  import { Mail, Eye, EyeOff, House } from 'lucide-svelte';
+
+  import adminLoginBg from '$lib/assets/admin-login.jpg?enhanced';
 
   let { form }: { form: ActionData } = $props();
   let showPassword = $state(false);
@@ -22,7 +24,7 @@
         size="icon-lg"
         class="flex  items-center justify-center rounded-lg"
       >
-        <Home class="h-5 w-5" />
+        <House class="h-5 w-5" />
       </Button>
     </div>
 
@@ -90,9 +92,8 @@
   <!-- Right Panel -->
   <div class="relative hidden p-2 lg:block lg:w-1/2">
     <div class="group relative h-full w-full overflow-hidden rounded-4xl bg-neutral shadow-inner">
-      <!-- Image from Unsplash -->
-      <img
-        src="https://images.unsplash.com/photo-1604076850742-4c7221f3101b?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+      <enhanced:img
+        src={adminLoginBg}
         decoding="async"
         alt="Abstract Fluid Space"
         class="absolute inset-0 h-full w-full mix-blend-difference grayscale transition-transform duration-[15s] ease-in-out group-hover:scale-105"
