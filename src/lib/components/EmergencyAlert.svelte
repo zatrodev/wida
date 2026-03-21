@@ -42,54 +42,67 @@
     if (intervalId) clearInterval(intervalId);
     if (audioCtx) audioCtx.close();
   });
+
+  const severityLabel: Record<string, string> = {
+    minor: 'Minor Earthquake',
+    moderate: 'Moderate Earthquake',
+    dangerous: 'EARTHQUAKE DETECTED'
+  };
+
+  const severityBgColor: Record<string, string> = {
+    minor: 'var(--threat-minor)',
+    moderate: 'var(--threat-moderate)',
+    dangerous: 'var(--threat-dangerous)'
+  };
+
+  let overlayBg = $derived(
+    severityBgColor[alertStore.currentSeverity] ?? 'var(--threat-dangerous)'
+  );
 </script>
 
-{#if alertStore.isQuakeActive}
+{#if alertStore.isQuakeActive && alertStore.latestAlert}
   <div
-    class="fixed inset-0 z-50 flex animate-[pulse_1.5s_ease-in-out_infinite] items-center justify-center bg-destructive/95 backdrop-blur-md"
+    class="fixed inset-0 z-50 flex animate-[pulse_1.5s_ease-in-out_infinite] items-center justify-center backdrop-blur-md"
+    style="background-color: color-mix(in srgb, {overlayBg} 95%, transparent);"
     role="alertdialog"
     aria-modal="true"
   >
     <div
-      class="w-full max-w-md scale-100 transform rounded-3xl border border-destructive bg-black/60 p-8 text-center shadow-2xl backdrop-blur-lg transition-all duration-300"
+      class="w-full max-w-md scale-100 transform rounded-3xl border border-white/20 bg-black/60 p-8 text-center shadow-2xl backdrop-blur-lg transition-all duration-300"
     >
-      <AlertTriangle
-        class="mx-auto mb-6 h-32 w-32 animate-bounce text-destructive drop-shadow-lg"
-      />
+      <AlertTriangle class="mx-auto mb-6 h-32 w-32 animate-bounce text-white drop-shadow-lg" />
       <h1 class="mb-4 text-5xl font-extrabold tracking-tighter text-white uppercase drop-shadow-md">
-        Earthquake<br />Detected
+        {severityLabel[alertStore.currentSeverity] ?? 'ALERT'}
       </h1>
 
-      <p class="text-destructive-foreground mb-8 text-lg font-medium">
+      <p class="mb-8 text-lg font-medium text-white/90">
         Seek cover immediately! Drop, Cover, and Hold on until shaking stops.
       </p>
 
-      {#if alertStore.latestAlert}
-        <div class="mb-8 rounded-2xl border border-destructive/50 bg-destructive/20 p-4 text-left">
-          <div class="text-destructive-foreground mb-2 flex items-center">
-            <Activity class="mr-2 h-4 w-4" />
-            <span class="text-sm font-semibold tracking-wider uppercase">Sensor Feedback</span>
+      <div class="mb-8 rounded-2xl border border-white/20 bg-white/10 p-4 text-left">
+        <div class="mb-2 flex items-center text-white/80">
+          <Activity class="mr-2 h-4 w-4" />
+          <span class="text-sm font-semibold tracking-wider uppercase">Sensor Feedback</span>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <span class="mb-1 block text-xs text-white/60">Confidence</span>
+            <span class="text-xl font-bold text-white drop-shadow-sm"
+              >{(alertStore.latestAlert.confidence_score * 100).toFixed(1)}%</span
+            >
           </div>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <span class="mb-1 block text-xs text-destructive/80">Confidence</span>
-              <span class="text-xl font-bold text-white drop-shadow-sm"
-                >{(alertStore.latestAlert.confidence_score * 100).toFixed(1)}%</span
-              >
-            </div>
-            <div>
-              <span class="mb-1 block text-xs text-destructive/80">Impact Axis (Z)</span>
-              <span class="text-xl font-bold text-white drop-shadow-sm"
-                >{alertStore.latestAlert.z_axis.toFixed(2)}G</span
-              >
-            </div>
+          <div>
+            <span class="mb-1 block text-xs text-white/60">Frequency</span>
+            <span class="text-xl font-bold text-white drop-shadow-sm"
+              >{alertStore.latestAlert.frequency_hz.toFixed(1)} Hz</span
+            >
           </div>
         </div>
-      {/if}
+      </div>
 
       <Button
         variant="outline"
-        class="text-destructive-foreground hover:text-destructive-foreground h-16 w-full rounded-xl border-2 border-destructive/60 text-lg font-bold tracking-widest uppercase transition-colors duration-300 hover:bg-destructive"
+        class="h-16 w-full rounded-xl border-2 border-white/40 text-lg font-bold tracking-widest text-white uppercase transition-colors duration-300 hover:bg-white/20 hover:text-white"
         onclick={() => alertStore.acknowledge()}
       >
         Acknowledge & Dismiss

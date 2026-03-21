@@ -1,139 +1,269 @@
 <script lang="ts">
   import Clock from '$lib/components/Clock.svelte';
-  import { Ellipsis, ArrowUp, ArrowDown, ChevronDown } from 'lucide-svelte';
+  import { alertStore } from '$lib/stores/alert-store.svelte';
+  import {
+    Ellipsis,
+    ArrowUp,
+    ArrowDown,
+    ChevronDown,
+    Shield,
+    Hand,
+    RefreshCcw
+  } from 'lucide-svelte';
+  import AlertHistoryModal from '$lib/components/AlertHistoryModal.svelte';
+  import Button from '$lib/components/ui/button/button.svelte';
 
-  const chart1 = [20, 25, 30, 40, 50, 45, 60, 55, 70, 65, 80, 75, 90, 85, 100, 95];
-  const chart2 = [40, 35, 30, 25, 20, 30, 40, 50, 45, 55, 60, 50, 60, 45, 55];
-  const chart3 = [30, 40, 50, 60, 70, 65, 80, 90, 85, 75, 65, 55, 80, 95, 85, 70];
+  // ── Derived Live Telemetry data ─────────────────────────────────────────
+  let now = $state(Date.now());
+  $effect(() => {
+    const interval = setInterval(() => {
+      now = Date.now();
+    }, 1000);
+    return () => clearInterval(interval);
+  });
 
-  const timeline = [
-    { time: '11AM', state: 'empty' },
-    { time: '11AM', state: 'filled' },
-    { time: '12PM', state: 'filled' },
-    { time: '1PM', state: 'filled' },
-    { time: '2PM', state: 'filled' },
-    { time: '3PM', state: 'filled' },
-    { time: '4PM', state: 'empty' }
-  ];
+  function getTimeAgo(dateString: string | undefined, currentTime: number) {
+    if (!dateString) return 'Waiting...';
+    const seconds = Math.floor((currentTime - new Date(dateString).getTime()) / 1000);
+    if (seconds < 0) return 'Just now';
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+  }
 
-  const reportData = [
-    { day: 'Mon', arrow: ArrowUp, val: 276, active: false },
-    { day: 'Tue', arrow: ArrowUp, val: 282, active: false },
-    { day: 'Wed', arrow: ArrowUp, val: 297, active: true },
-    { day: 'Thu', arrow: ArrowDown, val: 269, active: false },
-    { day: 'Fri', arrow: ArrowUp, val: 274, active: false },
-    { day: 'Sat', arrow: ArrowDown, val: 175, active: false },
-    { day: 'Sun', arrow: ArrowDown, val: 138, active: false }
-  ];
+  let lastInference = $derived(getTimeAgo(alertStore.latestAlert?.recorded_at, now));
+  let lstmConfidence = $derived(alertStore.latestAlert?.confidence_score ?? 0);
+  let fftLatency = $derived(alertStore.latestAlert?.fft_latency_ms);
+  let sensorTemp = $derived(alertStore.latestAlert?.sensor_temperature_c);
+
+  // ── 4-tier threat legend ───────────────────────────────────────────
+  const threatLevels = [
+    { label: 'Normal', color: 'bg-threat-normal' },
+    { label: 'Minor', color: 'bg-threat-minor' },
+    { label: 'Moderate', color: 'bg-threat-moderate' },
+    { label: 'Dangerous', color: 'bg-threat-dangerous' }
+  ] as const;
+
+  const severityDotColor: Record<string, string> = {
+    normal: 'bg-threat-normal',
+    minor: 'bg-threat-minor',
+    moderate: 'bg-threat-moderate',
+    dangerous: 'bg-threat-dangerous'
+  };
+
+  // ── Determine the current threat level for the safety card ─────────
+  let currentThreat = $derived(alertStore.currentSeverity);
+  let threatBg = $derived(
+    currentThreat === 'dangerous'
+      ? 'bg-threat-dangerous/20 border-threat-dangerous/40'
+      : currentThreat === 'moderate'
+        ? 'bg-threat-moderate/20 border-threat-moderate/40'
+        : currentThreat === 'minor'
+          ? 'bg-threat-minor/20 border-threat-minor/40'
+          : 'bg-threat-normal/20 border-threat-normal/40'
+  );
+
+  // ── Derive display values from live data or fallback ───────────────
+  let displayFreq = $derived(alertStore.latestAlert?.frequency_hz);
+  let displayX = $derived(alertStore.latestAlert?.raw_x);
+  let displayY = $derived(alertStore.latestAlert?.raw_y);
+  let displayZ = $derived(alertStore.latestAlert?.raw_z);
+
+  // ── Waveform Chart Logic (Line + Scatter Plot) ─────────────────────
+  // We'll normalize the values to a 0-100 range for the SVG viewBox.
+  // Assuming a range of 0-250 Hz for the peaks.
+  const MAX_VAL = 250;
+
+  function getPath(data: number[]) {
+    if (data.length < 2) return '';
+    const points = data.map((val, i) => {
+      const x = (i / (data.length - 1)) * 100;
+      const y = 100 - (Math.min(val, MAX_VAL) / MAX_VAL) * 100;
+      return `${x},${y}`;
+    });
+    return `M ${points.join(' L ')}`;
+  }
+
+  function getPoints(data: number[]) {
+    return data.map((val, i) => ({
+      x: (i / (data.length - 1)) * 100,
+      y: 100 - (Math.min(val, MAX_VAL) / MAX_VAL) * 100
+    }));
+  }
+
+  let lineX = $derived(getPath(alertStore.recentAlerts.map((a) => a.raw_x)));
+  let lineY = $derived(getPath(alertStore.recentAlerts.map((a) => a.raw_y)));
+  let lineZ = $derived(getPath(alertStore.recentAlerts.map((a) => a.raw_z)));
+
+  let dotsX = $derived(getPoints(alertStore.recentAlerts.map((a) => a.raw_x)));
+  let dotsY = $derived(getPoints(alertStore.recentAlerts.map((a) => a.raw_y)));
+  let dotsZ = $derived(getPoints(alertStore.recentAlerts.map((a) => a.raw_z)));
+
+  let historyModalOpen = $state(false);
+
+  function formatDate(dateStr: string) {
+    return new Date(dateStr).toLocaleString();
+  }
 </script>
 
 <main
   class="mx-auto min-h-screen max-w-360 p-6 md:mt-2 md:px-16 [&_h3]:font-mono [&_h3]:tracking-tighter"
 >
-  <!-- Top Header aligned exactly to grid -->
+  <!-- Top Header -->
   <div class="mb-8 grid grid-cols-12 items-end gap-6 font-mono text-foreground">
     <div class="col-span-12 text-3xl font-medium tracking-tight lg:col-span-6">Overview</div>
     <div class="col-span-12 text-3xl font-medium tracking-tight lg:col-span-3">
       <Clock />
       <span class="ml-2 text-sm font-normal text-muted-foreground">Time</span>
     </div>
-    <div class="col-span-12 text-right text-3xl font-medium tracking-tight lg:col-span-3">
-      9 September
-    </div>
   </div>
 
   <!-- Bento Grid -->
-  <div class="grid max-h-screen grid-cols-12 gap-6">
+  <div class="grid grid-cols-12 gap-6">
     <!-- ROW 1 -->
-    <!-- Card 1: Total energy consumption => Seismic Activity -->
+
+    <!-- ═══ CARD 1: Live Telemetry (Top-Left) ═══ -->
     <div
       class="col-span-12 overflow-hidden rounded-4xl border border-border p-6 lg:col-span-6 lg:p-8"
     >
-      <div class="mb-10 flex items-center justify-between">
-        <h3 class="text-xl">Total seismic activities</h3>
-        <button
-          class="rounded-full border border-border bg-transparent px-4 py-1.5 text-sm transition-colors hover:bg-white/10"
-        >
-          Change sensors
-        </button>
+      <div class="mb-6 flex items-center justify-between">
+        <h3 class="text-xl">Live Telemetry</h3>
+        <div class="flex items-center gap-2">
+          <span class="relative flex h-2.5 w-2.5">
+            <span
+              class="absolute inline-flex h-full w-full animate-ping rounded-full bg-threat-normal opacity-75"
+            ></span>
+            <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-threat-normal"></span>
+          </span>
+          <span class="text-sm text-muted-foreground">Live</span>
+        </div>
       </div>
 
-      <div class="grid grid-cols-3 gap-6">
-        <!-- Sub-chart 1 -->
+      <!-- Main frequency display -->
+      <div class="mb-8 flex items-end gap-4">
+        <div class="text-[4.5rem] leading-none font-light tracking-tight">
+          {displayFreq ? displayFreq.toFixed(1) : '---'}
+        </div>
+        <div class="mb-2 text-xl text-muted-foreground">Hz</div>
+      </div>
+
+      <!-- 3-axis waveforms (SVG Live Line Charts) -->
+      <div class="grid grid-cols-1 gap-12 sm:grid-cols-3 sm:gap-6">
+        <!-- X-axis -->
         <div class="flex h-full flex-col justify-end">
-          <div class="mb-6 flex items-center justify-between">
+          <div class="mb-4 flex items-center justify-between">
             <span class="flex items-center text-sm font-medium text-muted-foreground"
-              >Primary <ArrowUp class="ml-1 h-3 w-3" /></span
+              >X-Axis <ArrowUp class="ml-1 h-3 w-3" /></span
             >
-            <Ellipsis class="h-4 w-4 text-muted-foreground" />
           </div>
-          <div class="mb-6 flex h-28 items-end gap-0.75">
-            {#each chart1 as height, i (i)}
-              <div
-                class="w-full rounded-full transition-all {i > chart1.length - 6
-                  ? 'bg-foreground'
-                  : 'bg-foreground/20'}"
-                style="height: {height}%"
-              ></div>
-            {/each}
+          <!-- Line Chart Container -->
+          <div class="mb-4 h-24 w-full">
+            <svg
+              class="h-full w-full overflow-visible"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+            >
+              <path
+                d={lineX}
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                class="opacity-40"
+              />
+              {#each dotsX as dot (dot.x)}
+                <circle cx={dot.x} cy={dot.y} r="1.2" fill="currentColor" />
+              {/each}
+            </svg>
           </div>
-          <div class="text-[2.5rem] leading-none font-light tracking-tight">52-71</div>
-          <div class="mt-2 text-xs text-muted-foreground">hz per month</div>
+          <div class="text-2xl leading-none font-light tracking-tight">
+            {displayX ? displayX.toFixed(1) : '---'}
+          </div>
+          <div class="mt-1 text-xs text-muted-foreground">Hz peak</div>
         </div>
 
-        <!-- Sub-chart 2 -->
+        <!-- Y-axis -->
         <div class="flex h-full flex-col justify-end">
-          <div class="mb-6 flex items-center justify-between">
+          <div class="mb-4 flex items-center justify-between">
             <span class="flex items-center text-sm font-medium text-muted-foreground"
-              >Secondary <ArrowDown class="ml-1 h-3 w-3" /></span
+              >Y-Axis <ArrowDown class="ml-1 h-3 w-3" /></span
             >
-            <Ellipsis class="h-4 w-4 text-muted-foreground" />
           </div>
-          <div class="mb-6 flex h-28 items-end gap-0.75">
-            {#each chart2 as height, i (i)}
-              <div
-                class="w-full rounded-full transition-all {i < 5
-                  ? 'bg-foreground'
-                  : 'bg-foreground/20'}"
-                style="height: {height}%"
-              ></div>
-            {/each}
+          <div class="mb-4 h-24 w-full">
+            <svg
+              class="h-full w-full overflow-visible"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+            >
+              <path
+                d={lineY}
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                class="opacity-40"
+              />
+              {#each dotsY as dot (dot.x)}
+                <circle cx={dot.x} cy={dot.y} r="1.2" fill="currentColor" />
+              {/each}
+            </svg>
           </div>
-          <div class="text-[2.5rem] leading-none font-light tracking-tight">29-37</div>
-          <div class="mt-2 text-xs text-muted-foreground">hz per month</div>
+          <div class="text-2xl leading-none font-light tracking-tight">
+            {displayY ? displayY.toFixed(1) : '---'}
+          </div>
+          <div class="mt-1 text-xs text-muted-foreground">Hz peak</div>
         </div>
 
-        <!-- Sub-chart 3 -->
+        <!-- Z-axis -->
         <div class="flex h-full flex-col justify-end">
-          <div class="mb-6 flex items-center justify-between">
+          <div class="mb-4 flex items-center justify-between">
             <span class="flex items-center text-sm font-medium text-muted-foreground"
-              >Tertiary <ArrowDown class="ml-1 h-3 w-3" /></span
+              >Z-Axis <ArrowDown class="ml-1 h-3 w-3" /></span
             >
-            <Ellipsis class="h-4 w-4 text-muted-foreground" />
           </div>
-          <div class="mb-6 flex h-28 items-end gap-0.75">
-            {#each chart3 as height, i (i)}
-              <div
-                class="w-full rounded-full transition-all {i > chart3.length - 8 &&
-                i < chart3.length - 2
-                  ? 'bg-foreground'
-                  : 'bg-foreground/20'}"
-                style="height: {height}%"
-              ></div>
-            {/each}
+          <div class="mb-4 h-24 w-full">
+            <svg
+              class="h-full w-full overflow-visible"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+            >
+              <path
+                d={lineZ}
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                class="opacity-40"
+              />
+              {#each dotsZ as dot (dot.x)}
+                <circle cx={dot.x} cy={dot.y} r="1.2" fill="currentColor" />
+              {/each}
+            </svg>
           </div>
-          <div class="text-[2.5rem] leading-none font-light tracking-tight">49-85</div>
-          <div class="mt-2 text-xs text-muted-foreground">hz per month</div>
+          <div class="text-2xl leading-none font-light tracking-tight">
+            {displayZ ? displayZ.toFixed(1) : '---'}
+          </div>
+          <div class="mt-1 text-xs text-muted-foreground">Hz peak</div>
         </div>
+      </div>
+
+      <!-- 4-tier threat legend -->
+      <div class="mt-8 flex flex-wrap items-center gap-4">
+        {#each threatLevels as level (level.label)}
+          <div class="flex items-center gap-2">
+            <span class="h-3 w-3 rounded-full {level.color}"></span>
+            <span class="text-xs text-muted-foreground">{level.label}</span>
+          </div>
+        {/each}
       </div>
     </div>
 
-    <!-- Card 2: Green connections => Sensor connections -->
+    <!-- ═══ CARD 2: Sensor Status & Model (Top-Right, split) ═══ -->
     <div
       class="col-span-12 flex flex-col overflow-hidden rounded-4xl border border-border p-6 lg:col-span-3 lg:p-8"
     >
       <div class="mb-6 flex items-center justify-between">
-        <h3 class="text-xl font-medium">Sensor connections</h3>
+        <h3 class="text-xl font-medium">Model Health</h3>
         <Ellipsis class="h-5 w-5 text-muted-foreground" />
       </div>
 
@@ -141,7 +271,6 @@
         <span class="text-sm text-muted-foreground"
           >Station <span class="pl-2 text-foreground">Connected</span></span
         >
-        <!-- Custom styled toggle mirroring the screenshot -->
         <div class="flex h-6 w-11 cursor-pointer items-center rounded-full bg-white p-1">
           <div
             class="h-4 w-4 translate-x-5 rounded-full bg-black shadow-sm transition-transform"
@@ -149,172 +278,181 @@
         </div>
       </div>
 
-      <!-- Glowing Isometric abstract room graphic -->
-      <div
-        class="relative my-4 flex aspect-video w-full grow items-center justify-center overflow-hidden rounded-xl border border-border/20 bg-black/20"
-      >
-        <div
-          class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-size-[15px_15px]"
-        ></div>
-        <!-- Scanning glowing line -->
-        <div
-          class="absolute top-1/2 left-0 z-10 h-[1.5px] w-full bg-green-400/80 shadow-[0_0_20px_4px_rgba(74,222,128,0.5)]"
-        ></div>
-        <!-- Abstract central box -->
-        <div
-          class="absolute inset-4 flex items-center justify-center rounded-lg border-2 border-dashed border-green-500/20"
-        >
-          <div class="relative h-10 w-16 rounded-sm border border-green-500/40">
-            <div class="absolute -bottom-3 left-1/2 h-3 w-5 -translate-x-1/2 bg-green-500/20"></div>
-            <div
-              class="absolute -bottom-4 left-1/2 h-0.5 w-10 -translate-x-1/2 bg-green-500/40"
-            ></div>
+      <!-- Model metrics -->
+      <div class="flex grow flex-col justify-between gap-4">
+        <div class="rounded-2xl border border-border/60 bg-transparent p-4">
+          <div class="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+            LSTM Prediction
+          </div>
+          <div class="flex items-end gap-2">
+            <span class="text-3xl font-light tracking-tight"
+              >{(lstmConfidence * 100).toFixed(0)}%</span
+            >
+            <span class="mb-1 text-xs text-muted-foreground">confidence</span>
           </div>
         </div>
-      </div>
 
-      <div class="mt-4 flex items-center justify-between">
-        <span class="text-sm text-muted-foreground">Available memory</span>
-        <div class="mx-4 h-0.5 grow bg-muted-foreground/30"></div>
-        <span class="text-xl font-medium">83%</span>
+        <div class="rounded-2xl border border-border/60 bg-transparent p-4">
+          <div class="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+            FFT Processing
+          </div>
+          <div class="flex items-end gap-2">
+            <span class="text-3xl font-light tracking-tight"
+              >{fftLatency ? fftLatency.toFixed(1) : '--'}</span
+            >
+            <span class="mb-1 text-xs text-muted-foreground">ms latency</span>
+          </div>
+        </div>
+
+        <div class="mt-2 flex items-center justify-between">
+          <span class="text-sm text-muted-foreground">Sensor temp</span>
+          <div class="mx-4 h-0.5 grow bg-muted-foreground/30"></div>
+          <span
+            class="text-xl font-medium {sensorTemp ? 'text-foreground' : 'text-muted-foreground'}"
+            >{sensorTemp ? `${sensorTemp.toFixed(1)}°C` : 'N/A'}</span
+          >
+        </div>
       </div>
     </div>
 
-    <!-- Card 3: Recommendations -->
+    <!-- ═══ CARD 3: Duck Cover Hold (Top-Right) ═══ -->
     <div
-      class="col-span-12 flex flex-col justify-between overflow-y-scroll rounded-4xl border border-border p-6 lg:col-span-3 lg:p-8"
+      class="col-span-12 flex flex-col justify-between overflow-hidden rounded-4xl border p-6 transition-colors duration-500 lg:col-span-3 lg:p-8 {threatBg}"
     >
       <div>
         <div class="mb-6 flex items-center justify-between">
-          <h3 class="text-xl font-medium">Recommendations</h3>
+          <h3 class="text-xl font-medium">Safety Protocol</h3>
           <Ellipsis class="h-5 w-5 text-muted-foreground" />
         </div>
-        <p class="text-sm text-muted-foreground">Personalized tips for optimizing safety</p>
+        <p class="text-sm text-muted-foreground">In case of an earthquake</p>
       </div>
 
       <div class="mt-8 flex flex-col gap-4">
-        <!-- Light neutral recommendation box -->
-        <div class="rounded-3xl bg-neutral p-6 text-neutral-foreground">
-          <p class="mb-6 text-sm leading-relaxed">
-            Stable day ahead! We recommend maximizing sensor battery usage b...
-          </p>
-          <p class="text-xs opacity-60">Today recommendation</p>
+        <!-- Duck -->
+        <div
+          class="flex items-center gap-4 rounded-2xl border border-border/60 bg-background/40 p-4 shadow-sm backdrop-blur-sm"
+        >
+          <div
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-foreground/10"
+          >
+            <ArrowDown class="h-5 w-5 text-foreground" />
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-foreground">Drop</p>
+            <p class="text-xs text-muted-foreground">Get down on your hands and knees</p>
+          </div>
         </div>
 
-        <!-- Dark recommendation box -->
-        <div class="rounded-3xl border border-border/60 bg-transparent p-6">
-          <p class="mb-6 text-sm leading-relaxed text-foreground">
-            Run diagnostics after 8 PM to reduce network load.
-          </p>
-          <div class="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Analysis</span>
-            <span>5 min</span>
+        <!-- Cover -->
+        <div
+          class="flex items-center gap-4 rounded-2xl border border-border/60 bg-background/40 p-4 shadow-sm backdrop-blur-sm"
+        >
+          <div
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-foreground/10"
+          >
+            <Shield class="h-5 w-5 text-foreground" />
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-foreground">Cover</p>
+            <p class="text-xs text-muted-foreground">Take cover under a sturdy desk or table</p>
+          </div>
+        </div>
+
+        <!-- Hold -->
+        <div
+          class="flex items-center gap-4 rounded-2xl border border-border/60 bg-background/40 p-4 shadow-sm backdrop-blur-sm"
+        >
+          <div
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-foreground/10"
+          >
+            <Hand class="h-5 w-5 text-foreground" />
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-foreground">Hold On</p>
+            <p class="text-xs text-muted-foreground">Stay until the shaking stops</p>
           </div>
         </div>
       </div>
     </div>
 
     <!-- ROW 2 -->
-    <!-- Card 4: Tracking (Light neutral card) -->
+
+    <!-- ═══ CARD 4: Tracking / Forecast (Bottom-Left) ═══ -->
     <div
-      class="col-span-12 flex flex-col justify-between overflow-hidden rounded-4xl border border-neutral/10 bg-neutral p-6 text-neutral-foreground lg:col-span-2 lg:p-8"
+      class="col-span-12 flex flex-col justify-between overflow-hidden rounded-4xl border border-neutral/10 bg-neutral p-6 text-neutral-foreground lg:col-span-4 lg:p-8"
     >
       <div>
         <div class="mb-4 flex items-center justify-between">
-          <h3 class="text-xl font-medium">Tracking</h3>
+          <h3 class="text-xl font-medium">Status</h3>
           <Ellipsis class="h-5 w-5 opacity-50" />
         </div>
-        <p class="text-sm opacity-70">Seismic energy tomorrow</p>
+        <p class="text-sm text-balance opacity-70">Current threat level</p>
       </div>
       <div>
-        <div class="text-[5rem] leading-none font-light tracking-tight">5.7</div>
-        <div class="mt-2 text-sm opacity-70">Mag</div>
+        <div class="mb-2 flex items-center gap-3">
+          <span class="h-4 w-4 rounded-full {severityDotColor[currentThreat]}"></span>
+          <span class="text-lg font-medium capitalize">{currentThreat}</span>
+        </div>
+        <div class="mt-2 text-sm opacity-70">
+          Last inference: {lastInference}
+        </div>
+        <div class="text-sm opacity-70">Uptime: N/A</div>
       </div>
     </div>
 
-    <!-- Card 5: Detailed report -->
+    <!-- ═══ CARD 6: Alert History (Bottom-Right) ═══ -->
     <div
-      class="col-span-12 flex flex-col justify-between overflow-hidden rounded-4xl border border-border p-6 lg:col-span-4 lg:p-8"
+      class="col-span-12 flex flex-col overflow-hidden rounded-4xl border border-border p-6 lg:col-span-8 lg:p-8"
     >
-      <div>
-        <div class="mb-4 flex items-center justify-between">
-          <h3 class="text-xl font-medium">Detailed report</h3>
-          <button
-            class="flex items-center gap-1 rounded-full border border-border px-4 py-1.5 text-sm transition-colors hover:bg-white/10"
+      <div class="mb-6 flex items-center justify-between">
+        <h3 class="text-xl font-medium">Alert history</h3>
+        <div class="flex items-center gap-2">
+          <Button
+            onclick={() => alertStore.init()}
+            variant="outline"
+            class="aspect-square rounded-full"
+            title="Refresh"
           >
-            Week <ChevronDown class="h-3 w-3" />
-          </button>
-        </div>
-        <p class="text-sm text-muted-foreground">Graphs of seismic activities</p>
-      </div>
-
-      <div class="mt-8 flex w-full flex-col">
-        <div class="flex w-full justify-between pb-6 text-xs text-muted-foreground">
-          {#each reportData as d (d)}
-            <div class="-mr-2 flex flex-col justify-end last:mr-0">
-              <span class="mb-4 flex items-center">{d.day} <d.arrow class="ml-0.5 h-3 w-3" /></span>
-              <span class="text-[13px] {d.active ? 'font-bold text-foreground' : 'text-foreground'}"
-                >{d.val}</span
-              >
-              <span class="mt-0.5">Hz</span>
-            </div>
-          {/each}
-        </div>
-        <!-- Bar below the graphs matching the screenshot exactly -->
-        <div class="flex h-1.5 w-full overflow-hidden rounded bg-border">
-          <div class="w-[28.5%] bg-transparent"></div>
-          <!-- Skips Mon & Tue -->
-          <div class="w-[14.28%] bg-white"></div>
-          <!-- Highlights Wed -->
+            <RefreshCcw class="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            onclick={() => (historyModalOpen = true)}
+            class="rounded-full   "
+          >
+            View all
+          </Button>
         </div>
       </div>
-    </div>
 
-    <!-- Card 6: Green energy usage => Clean system usage (Light neutral card) -->
-    <div
-      class="col-span-12 flex flex-col justify-between overflow-hidden rounded-4xl border border-neutral/10 bg-neutral p-6 text-neutral-foreground lg:col-span-6 lg:p-8"
-    >
-      <div class="mb-10 flex items-center justify-between">
-        <h3 class="text-xl font-medium">Clean system usage</h3>
-        <button
-          class="rounded-full border border-neutral-foreground/20 px-5 py-2 text-sm transition-colors hover:bg-black/5"
-        >
-          Change
-        </button>
-      </div>
-
-      <div class="grid grow grid-cols-12 items-end">
-        <div class="col-span-4 flex flex-col">
-          <p class="mb-6 text-sm opacity-70">Clean system usage</p>
-          <div class="text-[5rem] leading-none font-light tracking-tight">47%</div>
-          <div class="mt-3 text-sm font-medium tracking-wide opacity-70">11AM — 3PM</div>
-        </div>
-
-        <div class="col-span-8 flex justify-end pb-2">
-          <!-- Timeline graphic -->
-          <div class="relative flex w-full max-w-sm items-center justify-between">
-            <!-- Dashed line connecting circles -->
-            <div
-              class="absolute top-2.75 left-0 -z-10 w-full border-b-[1.5px] border-dashed border-neutral-foreground/30"
-            ></div>
-
-            {#each timeline as t (t)}
-              <div class="flex flex-col items-center gap-3">
-                {#if t.state === 'empty'}
-                  <div
-                    class="h-5.5 w-5.5 rounded-full border-[1.5px] border-neutral-foreground/50 bg-neutral"
-                  ></div>
-                {:else}
-                  <div class="h-5.5 w-5.5 rounded-full bg-neutral-foreground shadow-sm"></div>
-                {/if}
-                <span class="text-[10px] font-medium tracking-wider uppercase opacity-70"
-                  >{t.time}</span
-                >
-              </div>
-            {/each}
+      <!-- Scrollable alert list -->
+      <div class="flex flex-col gap-2 overflow-y-auto" style="max-height: 240px;">
+        {#each alertStore.alertHistory as entry (entry.id)}
+          <div
+            class="flex items-center gap-4 rounded-2xl border border-border/40 px-5 py-3 transition-colors hover:bg-foreground/5"
+          >
+            <span class="h-3 w-3 shrink-0 rounded-full {severityDotColor[entry.severity]}"></span>
+            <span class="grow text-sm text-muted-foreground">{formatDate(entry.recorded_at)}</span>
+            <span class="text-sm font-medium text-foreground"
+              >{entry.frequency_hz.toFixed(1)} Hz</span
+            >
+            <span
+              class="rounded-full px-2.5 py-0.5 text-xs font-medium capitalize {entry.severity ===
+              'normal'
+                ? 'bg-threat-normal/20 text-threat-normal'
+                : entry.severity === 'minor'
+                  ? 'bg-threat-minor/20 text-threat-minor'
+                  : entry.severity === 'moderate'
+                    ? 'bg-threat-moderate/20 text-threat-moderate'
+                    : 'bg-threat-dangerous/20 text-threat-dangerous'}"
+            >
+              {entry.severity}
+            </span>
           </div>
-        </div>
+        {/each}
       </div>
     </div>
   </div>
 </main>
+
+<AlertHistoryModal bind:open={historyModalOpen} />

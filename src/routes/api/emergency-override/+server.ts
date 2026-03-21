@@ -13,11 +13,13 @@ export const POST: RequestHandler = async ({ locals }) => {
     // Insert a mock earthquake trigger into the DB.
     // Supabase real-time will catch this INSERT and broadcast it to all connected clients!
     await db.insert(alerts).values({
-      x_axis: Math.random() * 5,
-      y_axis: Math.random() * 5,
-      z_axis: 2.5 + Math.random() * 5, // high G-force to simulate quake
-      is_quake: true,
-      confidence_score: 0.98
+      device_id: 'wida-01',
+      frequency_hz: 15.0 + Math.random() * 10,
+      raw_x: 100 + Math.random() * 150,
+      raw_y: 100 + Math.random() * 150,
+      raw_z: 100 + Math.random() * 150,
+      severity: 'dangerous',
+      confidence_score: 0.92 + Math.random() * 0.08
     });
 
     return json({ success: true, message: 'Global emergency alert transmitted.' });
