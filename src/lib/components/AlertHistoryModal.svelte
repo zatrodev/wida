@@ -16,6 +16,8 @@
 
   let filterSeverity = $state<Severity | 'all'>('all');
   let minConfidence = $state(0);
+  let startDate = $state<string>('');
+  let endDate = $state<string>('');
   let scrollY = $state(0);
 
   // ── Fetch Logic ──────────────────────────────────────────────────
@@ -33,6 +35,14 @@
 
       if (minConfidence > 0) {
         query = query.gte('confidence_score', minConfidence / 100);
+      }
+
+      if (startDate) {
+        query = query.gte('recorded_at', new Date(startDate).toISOString());
+      }
+
+      if (endDate) {
+        query = query.lte('recorded_at', new Date(endDate).toISOString());
       }
 
       const from = (page - 1) * pageSize;
@@ -189,6 +199,38 @@
                   bind:value={minConfidence}
                   onchange={() => (page = 1)}
                   class="h-10 w-48 accent-foreground"
+                />
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <label
+                  for="startDate"
+                  class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+                >
+                  From
+                </label>
+                <input
+                  id="startDate"
+                  type="datetime-local"
+                  bind:value={startDate}
+                  onchange={() => (page = 1)}
+                  class="h-10 rounded-xl border border-border bg-background px-4 text-sm transition-all outline-none focus:border-foreground"
+                />
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <label
+                  for="endDate"
+                  class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+                >
+                  To
+                </label>
+                <input
+                  id="endDate"
+                  type="datetime-local"
+                  bind:value={endDate}
+                  onchange={() => (page = 1)}
+                  class="h-10 rounded-xl border border-border bg-background px-4 text-sm transition-all outline-none focus:border-foreground"
                 />
               </div>
 
